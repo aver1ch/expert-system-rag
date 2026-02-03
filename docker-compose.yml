@@ -1,0 +1,31 @@
+version: "3.9"
+
+services:
+  core:
+    build: ./core
+    container_name: expert-core
+    environment:
+      # Ожидается, что Ollama запущен на хост-машине.
+      # Для macOS host.docker.internal обычно доступен.
+      - OLLAMA_HOST=host.docker.internal:11434
+    ports:
+      - "8000:8000"
+
+  backend:
+    build: ./backend
+    container_name: expert-backend
+    environment:
+      - CORE_SERVICE_URL=http://core:8000
+    depends_on:
+      - core
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    container_name: expert-frontend
+    depends_on:
+      - backend
+    ports:
+      - "5173:5173"
+
