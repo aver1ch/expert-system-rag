@@ -1,6 +1,7 @@
 from typing import List, Optional, Any, Dict
 import json
 import difflib
+import os
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -35,7 +36,8 @@ def _init_llm() -> Ollama:
     Инициализация локальной модели Ollama.
     Используем ту же модель, что и в скриптах core/main.py / main2.py.
     """
-    return Ollama(model="deepseek-r1:7b")
+    ollama_host = os.getenv("OLLAMA_HOST", "host.docker.internal:11434")
+    return Ollama(model="deepseek-r1:7b", base_url=f"http://{ollama_host}")
 
 
 def _init_embeddings() -> HuggingFaceEmbeddings:

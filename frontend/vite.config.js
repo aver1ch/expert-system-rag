@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       // все запросы с фронта на /analyze будут проксированы на Go backend
-      '/analyze': 'http://expert-backend:8080',
+      '/analyze': 'http://backend:8080',
     },
   },
 })

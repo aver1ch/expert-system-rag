@@ -87,7 +87,42 @@ func analyzeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func waitForCoreService() {
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	coreEndpoint := coreURL() + "/analyze"
+
+	for {
+		req, err := http.NewRequest(http.MethodPost, coreEndpoint, bytes.NewReader([]byte(`{"text": "health check"}`)))
+		if err != nil {
+			log.Printf("failed to build health check request: %v", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := client.Do(req)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			resp.Body.Close()
+			log.Printf("Core service is ready at %s", coreEndpoint)
+			return
+		}
+
+		if resp != nil {
+			resp.Body.Close()
+		}
+
+		log.Printf("Waiting for core service at %s...", coreEndpoint)
+		time.Sleep(2 * time.Second)
+	}
+}
+
 func main() {
+	log.Printf("Waiting for core service...")
+	waitForCoreService()
+
 	http.HandleFunc("/analyze", analyzeHandler)
 
 	addr := ":8080"
@@ -96,4 +131,3 @@ func main() {
 		log.Fatalf("server error: %v", err)
 	}
 }
-
