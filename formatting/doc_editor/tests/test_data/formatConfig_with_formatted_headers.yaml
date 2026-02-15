@@ -1,0 +1,138 @@
+document:
+  general:
+    margins:
+      left: 20mm
+      right: 10mm
+      top: 20mm
+      bottom: 20mm
+    fonts:
+      main:
+        family: Arial
+        size: 12pt
+      appendices:
+        family: Arial
+        size: 12pt
+      notes:
+        family: Arial
+        size: 12pt
+      headerNum: 3
+      header1:
+        family: Arial
+        size: 14pt
+        bold: True
+      header2:
+        family: Arial
+        size: 12pt
+        bold: True
+      header3:
+        family: Arial
+        size: 10pt
+        bold: True
+    spacing:
+      line: 1.5
+      exceptions:
+        - first_edition: single
+
+  structure:
+    title_page:
+      template: "title_page_template"
+      template_path: "doc_editor/templates/title_page_template.docx"
+      image_path: "doc_editor/templates/logo.png"
+      enabled: true
+      line_spacing: 1
+      elements:
+        - agency_name: "ФЕДЕРАЛЬНОЕ АГЕНСТВО\nПО ТЕХНИЧЕСКОМУ РЕГУЛИРОВАНИЮ И МЕТРОЛОГИИ"
+        - standart_type: "ГОСТ Р"
+        - designation: "(проект, первая редакция)"
+        - title: "Искуссвтенный интеллект \n\n МАРКИРОВКА ПРОДУКЦИИ \n\n Основные требования" 
+        - status: "Настоящий проект стандарта не подлежит применению до его утверждения"
+        - publisher_info: Российский институт стандартизации
+        - city: Москва
+        - current_year: "202_"
+
+    paragraphs:
+      enabled: true
+
+    numbering:
+      main: arabic
+      special_pages:
+        - preface: roman
+        - content: roman
+        - introduction: roman
+      start_from: II (for special pages)
+      headers:
+        # Новый формат с форматированным текстом
+        right_parts:
+          - text: "ГОСТ Р"
+            bold: true
+            italic: false
+          - text: " (проект, первая редакция)"
+            bold: false
+            italic: false
+        left_parts:
+          - text: "ГОСТ Р"
+            bold: true
+            italic: false
+          - text: "  (проект, первая редакция)"
+            bold: false
+            italic: false
+        page_numbers: true
+        enabled: true
+
+  document_structure:
+      sections:
+        enabled: true
+        start_number: 1
+        numbering_format: "decimal"
+        auto_number_headings: true
+        numbering_levels: 3
+        include_in_toc: true
+
+      toc:
+        enabled: true
+        title: "ОГЛАВЛЕНИЕ"
+        page_numbers: true
+        levels: 3
+
+      preface:
+        enabled: true
+        content: "Настоящий проект стандарта разработан для демонстрации функционала системы\nавтоматического форматирования документов. Документ содержит все необходимые\nэлементы структуры согласно ГОСТ Р 1.5-2004."
+
+      appendix:
+        enabled: true
+        numbering_style: "letters"
+
+  special_cases:
+    draft:
+      designation_suffix: "(проект)"
+      watermark: "Настоящий проект стандарта не подлежит применению до его утверждения"
+      first_page_label: Проект, [редакция]
+      spacing_exceptions: allowed
+
+    changes:
+      form: Приложение Е
+      elements:
+        - change_number
+        - approval_date
+        - implementation_date
+        - text_format
+
+  metadata:
+    UDC: обязателен
+    OKS: обязателен
+    keywords: перечисление через запятую
+    product_codes: ОКП / ОКУН (при наличии)
+
+  compliance:
+    replaces: ГОСТ Р 1.5—2004
+    based_on: 
+      - ГОСТ 1.5—2001
+      - ГОСТ Р 1.7—2008
+    exceptions: Патентные ограничения (при наличии)
+
+validation:
+  - check_margins
+  - check_font_sizes
+  - validate_numbering_sequence
+  - ensure_roman_for_special_pages
+  - verify_metadata_inclusion

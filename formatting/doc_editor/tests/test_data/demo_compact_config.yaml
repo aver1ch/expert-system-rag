@@ -1,0 +1,85 @@
+document:
+  general:
+    margins:
+      left: 20mm
+      right: 10mm
+      top: 20mm
+      bottom: 20mm
+    fonts:
+      main:
+        family: Arial
+        size: 12pt
+      header1:
+        family: Arial
+        size: 14pt
+        bold: True
+      header2:
+        family: Arial
+        size: 12pt
+        bold: True
+      header3:
+        family: Arial
+        size: 10pt
+        bold: True
+    spacing:
+      line: 1.5
+
+  structure:
+    title_page:
+      enabled: true
+      template_path: "doc_editor/templates/title_page_template.docx"
+      image_path: "doc_editor/templates/logo.png"
+
+    numbering:
+      # ===== КОЛОНТИТУЛЫ (Headers/Footers) =====
+      headers:
+        enabled: true
+        page_numbers: true
+        right_parts:
+          - text: "ГОСТ Р"
+            bold: true
+            italic: false
+          - text: " (проект)"
+            bold: false
+            italic: false
+        left_parts:
+          - text: "Стандарт"
+            bold: false
+            italic: false
+
+      # ===== МНОГОУРОВНЕВАЯ НУМЕРАЦИЯ РАЗДЕЛОВ =====
+      sections:
+        enabled: true
+        start_number: 1
+        numbering_format: "decimal"
+        auto_number_headings: true
+        numbering_levels: 3
+
+    # ===== СТРУКТУРА ДОКУМЕНТА (ГОСТ) =====
+    document_structure:
+      
+      # Многоуровневая нумерация разделов
+      sections:
+        enabled: true
+        start_number: 1
+        numbering_format: "decimal"
+        auto_number_headings: true
+        numbering_levels: 3
+        include_in_toc: true
+
+      # Автоматическое оглавление
+      toc:
+        enabled: true
+        title: "ОГЛАВЛЕНИЕ"
+        page_numbers: true
+        levels: 3
+
+      # Предисловие
+      preface:
+        enabled: true
+        content: "Данный проект стандарта разработан для демонстрации\nполного функционала системы автоматического форматирования\nдокументов на основе ГОСТ Р 1.5-2004."
+
+      # Приложения с нумерацией буквами
+      appendix:
+        enabled: true
+        numbering_style: "letters"

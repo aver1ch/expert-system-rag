@@ -1,0 +1,79 @@
+document:
+  general:
+    margins:
+      left: 20mm
+      right: 10mm
+      top: 20mm
+      bottom: 20mm
+    fonts:
+      main:
+        family: Arial
+        size: 12pt
+      appendices:
+        family: Arial
+        size: 12pt
+      notes:
+        family: Arial
+        size: 12pt
+      header1:
+        family: Arial
+        size: 14pt
+        bold: True
+      header2:
+        family: Arial
+        size: 12pt
+        bold: True
+      header3:
+        family: Arial
+        size: 10pt
+        bold: True
+    spacing:
+      line: 1.5
+      exceptions: []
+
+  structure:
+    title_page:
+      template: "title_page_template"
+      template_path: "doc_editor/templates/title_page_template.docx"
+      image_path: "doc_editor/templates/logo.png"
+      enabled: true
+
+    numbering:
+      headers:
+        right: "ГОСТ Р (проект, первая редакция)"
+        left: "ГОСТ Р (проект, первая редакция)"
+        page_numbers: true
+        enabled: true
+        right_parts: []
+        left_parts: []
+      
+      sections:
+        enabled: true
+        start_number: 1
+        numbering_format: "decimal"
+        include_in_toc: true
+        auto_number_headings: true
+        numbering_levels: 3
+
+    document_structure:
+      sections:
+        enabled: true
+        start_number: 1
+        numbering_format: "decimal"
+        auto_number_headings: true
+        numbering_levels: 3
+
+      toc:
+        enabled: true
+        title: "ОГЛАВЛЕНИЕ"
+        page_numbers: true
+        levels: 3
+
+      preface:
+        enabled: true
+        content: "Настоящий проект стандарта разработан для демонстрации функционала системы\nавтоматического форматирования документов. Документ содержит все необходимые\nэлементы структуры согласно ГОСТ Р 1.5-2004."
+
+      appendix:
+        enabled: true
+        numbering_style: "letters"
+  
