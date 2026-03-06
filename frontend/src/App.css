@@ -209,6 +209,14 @@
   border-left-color: #2fb39f;
 }
 
+.feedback-gost_compliance {
+  border-left-color: #d07f2a;
+}
+
+.feedback-title_scope {
+  border-left-color: #5b8f2a;
+}
+
 .editor {
   min-height: 410px;
   border: 1px solid #c4d9e8;
@@ -254,6 +262,14 @@
 
 .hl-spelling {
   background: rgba(47, 179, 159, 0.26);
+}
+
+.hl-gost_compliance {
+  background: rgba(208, 127, 42, 0.24);
+}
+
+.hl-title_scope {
+  background: rgba(91, 143, 42, 0.24);
 }
 
 .analyze-row {

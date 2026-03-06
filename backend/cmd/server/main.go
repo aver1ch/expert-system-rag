@@ -21,7 +21,8 @@ import (
 )
 
 type analyzeRequest struct {
-	Text string `json:"text"`
+	Text  string `json:"text"`
+	Title string `json:"title,omitempty"`
 }
 
 type errorItem struct {

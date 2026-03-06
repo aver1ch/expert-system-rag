@@ -32,9 +32,12 @@ services:
       - HPC_OLLAMA_READY_INTERVAL_SEC=5
       - HPC_START_TIMEOUT_SEC=1800
       - RAG_DOCS_DIR=/app/docs
+      - RULES_DOCS_DIR=/app/rules
+      - RULES_TOP_K=4
     volumes:
       - ./core/runtime:/app/runtime
       - ./docs:/app/docs:ro
+      - ./rules:/app/rules:ro
       - /Users/averichie/Desktop/ACHTUNG:/root/.ssh:ro
     ports:
       - "8000:8000"

@@ -21,6 +21,7 @@ from pypdf import PdfReader
 
 class AnalyzeRequest(BaseModel):
     text: str
+    title: Optional[str] = None
 
 
 class ErrorItem(BaseModel):
@@ -49,8 +50,11 @@ splitter = RecursiveCharacterTextSplitter(chunk_size=512, chunk_overlap=64)
 _llm: Optional[Ollama] = None
 _vector_store: Optional[FAISS] = None
 _vector_store_init_done = False
+_rules_vector_store: Optional[FAISS] = None
+_rules_vector_store_init_done = False
 _llm_lock = threading.Lock()
 _vector_lock = threading.Lock()
+_rules_vector_lock = threading.Lock()
 
 
 def _log(req_id: str, message: str) -> None:
@@ -94,15 +98,18 @@ def _extract_text_from_doc(path: Path) -> str:
     return ""
 
 
-def _build_vector_store_from_docs(embeddings: HuggingFaceEmbeddings) -> Optional[FAISS]:
-    docs_dir = Path(os.getenv("RAG_DOCS_DIR", "/app/docs"))
-    if not docs_dir.exists() or not docs_dir.is_dir():
+def _build_vector_store_from_dir(
+    source_dir: Path,
+    embeddings: HuggingFaceEmbeddings,
+    text_prefix: str,
+) -> Optional[FAISS]:
+    if not source_dir.exists() or not source_dir.is_dir():
         return None
 
     texts: List[str] = []
     metadatas: List[Dict[str, str]] = []
 
-    for path in sorted(docs_dir.iterdir()):
+    for path in sorted(source_dir.iterdir()):
         if not path.is_file() or path.suffix.lower() not in {".txt", ".pdf", ".docx"}:
             continue
         try:
@@ -115,7 +122,7 @@ def _build_vector_store_from_docs(embeddings: HuggingFaceEmbeddings) -> Optional
         for chunk in splitter.split_text(raw):
             if not chunk.strip():
                 continue
-            texts.append("passage: " + chunk)
+            texts.append(text_prefix + chunk)
             metadatas.append({"source": path.name})
 
     if not texts:
@@ -133,12 +140,66 @@ def _get_vector_store() -> Optional[FAISS]:
             return _vector_store
         try:
             embeddings = _init_embeddings()
-            _vector_store = _build_vector_store_from_docs(embeddings)
+            docs_dir = Path(os.getenv("RAG_DOCS_DIR", "/app/docs"))
+            _vector_store = _build_vector_store_from_dir(docs_dir, embeddings, "passage: ")
         except Exception as exc:
             print(f"[RAG] vector store init failed: {exc}", flush=True)
             _vector_store = None
         _vector_store_init_done = True
     return _vector_store
+
+
+def _get_rules_vector_store() -> Optional[FAISS]:
+    global _rules_vector_store, _rules_vector_store_init_done
+    if _rules_vector_store_init_done:
+        return _rules_vector_store
+    with _rules_vector_lock:
+        if _rules_vector_store_init_done:
+            return _rules_vector_store
+        try:
+            embeddings = _init_embeddings()
+            rules_dir = Path(os.getenv("RULES_DOCS_DIR", "/app/rules"))
+            _rules_vector_store = _build_vector_store_from_dir(rules_dir, embeddings, "rule: ")
+        except Exception as exc:
+            print(f"[RAG] rules vector store init failed: {exc}", flush=True)
+            _rules_vector_store = None
+        _rules_vector_store_init_done = True
+    return _rules_vector_store
+
+
+def _build_rules_context(text: str, req_id: str) -> str:
+    rules_store = _get_rules_vector_store()
+    if rules_store is None:
+        _log(req_id, "rules context skipped: rules vector store is unavailable")
+        return ""
+
+    top_k_raw = os.getenv("RULES_TOP_K", "4").strip()
+    try:
+        top_k = max(1, int(top_k_raw))
+    except ValueError:
+        top_k = 4
+
+    query = "query: " + text[:4000]
+    try:
+        matches = rules_store.similarity_search(query, k=top_k)
+    except Exception as exc:
+        _log(req_id, f"rules context retrieval failed err={exc}")
+        return ""
+
+    if not matches:
+        _log(req_id, "rules context retrieval returned 0 matches")
+        return ""
+
+    blocks: List[str] = []
+    for i, match in enumerate(matches, start=1):
+        source = match.metadata.get("source", "unknown")
+        body = match.page_content
+        if body.startswith("rule: "):
+            body = body[len("rule: ") :]
+        blocks.append(f"[Rule {i}] source={source}\n{body[:900]}")
+
+    _log(req_id, f"rules context ready chunks={len(blocks)}")
+    return "\n\n".join(blocks)
 
 
 def _extract_json(text: str) -> Optional[Dict[str, Any]]:
@@ -215,7 +276,7 @@ def _detect_duplicates(text: str, req_id: str) -> Tuple[List[ErrorItem], Analyze
     return errors, summary
 
 
-def _detect_language_errors(text: str, req_id: str) -> List[ErrorItem]:
+def _detect_language_errors(text: str, req_id: str, title: str = "") -> List[ErrorItem]:
     if not text.strip():
         return []
 
@@ -230,20 +291,39 @@ def _detect_language_errors(text: str, req_id: str) -> List[ErrorItem]:
     except Exception as exc:
         _log(req_id, f"ollama_probe failed host={ollama_host} ms={((time.perf_counter() - probe_started) * 1000):.0f} err={exc}")
 
+    rules_context = _build_rules_context(text, req_id)
+    rules_section = rules_context if rules_context else "Нет дополнительных правил из базы."
+
+    effective_title = title.strip() or "Не указано"
+
     prompt = f"""
 Ты выступаешь как профессиональный русскоязычный редактор.
 
-Найди и верни ошибки по категориям:
+Дополнительные правила и нормы:
+{rules_section}
+
+Нужно выполнить задачи:
+1) Проверить соответствие оформления и изложения требованиям ГОСТ Р 1.5 и ГОСТ 1.5.
+2) Найти орфографические, пунктуационные, грамматические, стилистические и речевые ошибки.
+3) Оценить соответствие содержания основного текста наименованию проекта стандарта.
+4) Поиск дублирования выполняется отдельно другим модулем, НЕ добавляй в ответ отдельные ошибки дублирования.
+
+Наименование проекта стандарта:
+{effective_title}
+
+Найди и верни ошибки строго по категориям:
 - punctuation (пунктуация)
 - style (стилистика/речь)
 - grammar (грамматика)
 - spelling (орфография)
+- gost_compliance (несоответствие требованиям ГОСТ Р 1.5 / ГОСТ 1.5)
+- title_scope (несоответствие содержания наименованию проекта стандарта)
 
 Верни только JSON строго в формате:
 {{
   "errors": [
     {{
-      "category": "punctuation" | "style" | "grammar" | "spelling",
+      "category": "punctuation" | "style" | "grammar" | "spelling" | "gost_compliance" | "title_scope",
       "message": "краткое объяснение проблемы",
       "location": "короткий проблемный фрагмент",
       "suggestion": "что лучше сделать",
@@ -289,7 +369,7 @@ def _detect_language_errors(text: str, req_id: str) -> List[ErrorItem]:
     for item in items:
         try:
             category = str(item.get("category", "")).strip().lower() or "style"
-            if category not in {"punctuation", "style", "grammar", "spelling"}:
+            if category not in {"punctuation", "style", "grammar", "spelling", "gost_compliance", "title_scope"}:
                 category = "style"
 
             message = str(item.get("message", "")).strip()
@@ -350,7 +430,7 @@ def analyze(request: AnalyzeRequest, http_request: Request) -> AnalyzeResponse:
     total_started = time.perf_counter()
 
     duplicate_errors, summary = _detect_duplicates(text, req_id=req_id)
-    language_errors = _detect_language_errors(text, req_id=req_id)
+    language_errors = _detect_language_errors(text, req_id=req_id, title=request.title or "")
 
     all_errors = duplicate_errors + language_errors
     _log(req_id, f"done total_ms={((time.perf_counter() - total_started) * 1000):.0f} errors={len(all_errors)}")

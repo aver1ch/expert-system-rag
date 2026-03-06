@@ -15,6 +15,8 @@ const CATEGORY_META = {
   style: { label: 'Стиль', cls: 'style' },
   grammar: { label: 'Грамматика', cls: 'grammar' },
   spelling: { label: 'Орфография', cls: 'spelling' },
+  gost_compliance: { label: 'ГОСТ 1.5', cls: 'gost_compliance' },
+  title_scope: { label: 'Соответствие наименованию', cls: 'title_scope' },
 }
 
 const ANALYZE_PROGRESS_STEPS = [
@@ -106,19 +108,41 @@ function buildHighlightedHtml(text, errors, activeErrorId) {
 async function extractTextFromPdf(file) {
   const data = new Uint8Array(await file.arrayBuffer())
   const pdf = await pdfjs.getDocument({ data }).promise
-  let output = ''
+  const pages = []
   for (let i = 1; i <= pdf.numPages; i += 1) {
     const page = await pdf.getPage(i)
     const content = await page.getTextContent()
-    output += content.items.map((item) => item.str || '').join(' ') + '\n\n'
+    const rawPage = content.items.map((item) => item.str || '').join(' ')
+    pages.push(rawPage)
   }
-  return output.trim()
+  return normalizeExtractedText(pages.join('\n\n'))
 }
 
 async function extractTextFromDocx(file) {
   const buffer = await file.arrayBuffer()
   const result = await mammoth.extractRawText({ arrayBuffer: buffer })
-  return (result.value || '').trim()
+  return normalizeExtractedText(result.value || '')
+}
+
+function normalizeExtractedText(text) {
+  if (!text) {
+    return ''
+  }
+
+  return text
+    .replaceAll('\u00A0', ' ')
+    .replaceAll('\u2009', ' ')
+    .replaceAll('\u2002', ' ')
+    .replaceAll('\u2003', ' ')
+    .replaceAll('\t', ' ')
+    .replace(/\r\n?/g, '\n')
+    .replace(/[ ]{2,}/g, ' ')
+    .replace(/[ \n]*\n[ \n]*/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .join('\n')
+    .trim()
 }
 
 function App() {
@@ -142,6 +166,7 @@ function App() {
 
   const mappedErrors = useMemo(() => mapErrorsToText(text, errors), [text, errors])
   const activeError = mappedErrors.find((err) => err.id === activeErrorId) || null
+  const selectedDoc = useMemo(() => documents.find((doc) => doc.id === selectedDocId) || null, [documents, selectedDocId])
 
   useEffect(() => {
     if (!editorRef.current) {
@@ -344,7 +369,7 @@ function App() {
           'Content-Type': 'application/json',
           'X-Request-ID': nextReqId,
         },
-        body: JSON.stringify({ text: trimmed }),
+        body: JSON.stringify({ text: trimmed, title: selectedDoc?.name || '' }),
       })
 
       if (!res.ok) {

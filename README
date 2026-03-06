@@ -1,0 +1,6 @@
+** подключиться к узлу **
+ssh -i /Users/averichie/Desktop/ACHTUNG/supercomputer averichie@login1.hpc.spbstu.ru
+** прочекать джобы **
+squeue -M nv -l
+** вырубить джобу **
+scancel -M nv 56136
