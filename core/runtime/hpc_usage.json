@@ -1,0 +1,12 @@
+{
+  "week_start": "2026-03-02",
+  "used_seconds": 7200,
+  "active_session": {
+    "started_at": "2026-03-06T11:49:31.980564+00:00",
+    "planned_seconds": 3600,
+    "job_id": "56136",
+    "node": "nv1",
+    "reuse_existing": true
+  },
+  "limit_seconds": 36000
+}
