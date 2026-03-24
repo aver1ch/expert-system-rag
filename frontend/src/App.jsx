@@ -9,8 +9,8 @@ import './App.css'
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerSrc
 
 const CATEGORY_META = {
-  exact_duplicate: { label: 'Полное дублирование', cls: 'exact_duplicate' },
-  partial_duplicate: { label: 'Частичное дублирование', cls: 'partial_duplicate' },
+  exact_duplicate: { label: 'Дословное дублирование', cls: 'exact_duplicate' },
+  partial_duplicate: { label: 'Смысловое дублирование', cls: 'partial_duplicate' },
   punctuation: { label: 'Пунктуация', cls: 'punctuation' },
   style: { label: 'Стиль', cls: 'style' },
   grammar: { label: 'Грамматика', cls: 'grammar' },
@@ -512,8 +512,8 @@ function App() {
         </header>
 
         <section className="dup-stats">
-          <div className="stat-card">Полное дублирование: {summary.exact_duplicate_percent.toFixed(2)}%</div>
-          <div className="stat-card">Частичное дублирование: {summary.partial_duplicate_percent.toFixed(2)}%</div>
+          <div className="stat-card">Дословное дублирование: {summary.exact_duplicate_percent.toFixed(2)}%</div>
+          <div className="stat-card">Смысловое дублирование: {summary.partial_duplicate_percent.toFixed(2)}%</div>
         </section>
 
         {message && <div className="message">{message}</div>}

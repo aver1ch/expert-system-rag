@@ -19,7 +19,7 @@ services:
       - HPC_SLURM_CONSTRAINT=ollama
       - HPC_GPU_COUNT=7
       - HPC_MEM_PER_GPU=32G
-      - HPC_SLURM_TIME=00:10:00
+      - HPC_SLURM_TIME=01:00:00
       - HPC_REQUESTED_JOB_HOURS=1.0
       - HPC_MAX_WEEKLY_HOURS=10
       - HPC_JOB_NAME=ollama
@@ -32,12 +32,17 @@ services:
       - HPC_OLLAMA_READY_INTERVAL_SEC=5
       - HPC_START_TIMEOUT_SEC=1800
       - RAG_DOCS_DIR=/app/docs
+      - RAG_INDEX_DIR=/app/faiss_db/docs
+      - RAG_REBUILD=0
       - RULES_DOCS_DIR=/app/rules
+      - RULES_INDEX_DIR=/app/faiss_db/rules
+      - RULES_REBUILD=0
       - RULES_TOP_K=4
     volumes:
       - ./core/runtime:/app/runtime
       - ./docs:/app/docs:ro
       - ./rules:/app/rules:ro
+      - ./core/faiss_db:/app/faiss_db
       - /Users/averichie/Desktop/ACHTUNG:/root/.ssh:ro
     ports:
       - "8000:8000"

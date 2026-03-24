@@ -1,12 +1,12 @@
 {
-  "week_start": "2026-03-02",
-  "used_seconds": 21600,
+  "week_start": "2026-03-16",
+  "used_seconds": 28800,
+  "limit_seconds": 36000,
   "active_session": {
-    "started_at": "2026-03-06T14:13:28.090600+00:00",
+    "started_at": "2026-03-22T18:05:32.164939+00:00",
     "planned_seconds": 3600,
-    "job_id": "56138",
+    "job_id": "56393",
     "node": "nv1",
     "reuse_existing": false
-  },
-  "limit_seconds": 36000
+  }
 }

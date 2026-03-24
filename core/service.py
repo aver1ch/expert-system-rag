@@ -141,7 +141,22 @@ def _get_vector_store() -> Optional[FAISS]:
         try:
             embeddings = _init_embeddings()
             docs_dir = Path(os.getenv("RAG_DOCS_DIR", "/app/docs"))
-            _vector_store = _build_vector_store_from_dir(docs_dir, embeddings, "passage: ")
+            index_dir = Path(os.getenv("RAG_INDEX_DIR", "/app/faiss_db/docs"))
+            force_rebuild = os.getenv("RAG_REBUILD", "0").lower() in {"1", "true", "yes", "on"}
+
+            if index_dir.exists() and not force_rebuild:
+                _vector_store = FAISS.load_local(
+                    str(index_dir),
+                    embeddings,
+                    allow_dangerous_deserialization=True,
+                )
+                print(f"[RAG] loaded docs index from {index_dir}", flush=True)
+            else:
+                _vector_store = _build_vector_store_from_dir(docs_dir, embeddings, "passage: ")
+                if _vector_store is not None:
+                    index_dir.mkdir(parents=True, exist_ok=True)
+                    _vector_store.save_local(str(index_dir))
+                    print(f"[RAG] built docs index and saved to {index_dir}", flush=True)
         except Exception as exc:
             print(f"[RAG] vector store init failed: {exc}", flush=True)
             _vector_store = None
@@ -159,7 +174,22 @@ def _get_rules_vector_store() -> Optional[FAISS]:
         try:
             embeddings = _init_embeddings()
             rules_dir = Path(os.getenv("RULES_DOCS_DIR", "/app/rules"))
-            _rules_vector_store = _build_vector_store_from_dir(rules_dir, embeddings, "rule: ")
+            index_dir = Path(os.getenv("RULES_INDEX_DIR", "/app/faiss_db/rules"))
+            force_rebuild = os.getenv("RULES_REBUILD", "0").lower() in {"1", "true", "yes", "on"}
+
+            if index_dir.exists() and not force_rebuild:
+                _rules_vector_store = FAISS.load_local(
+                    str(index_dir),
+                    embeddings,
+                    allow_dangerous_deserialization=True,
+                )
+                print(f"[RAG] loaded rules index from {index_dir}", flush=True)
+            else:
+                _rules_vector_store = _build_vector_store_from_dir(rules_dir, embeddings, "rule: ")
+                if _rules_vector_store is not None:
+                    index_dir.mkdir(parents=True, exist_ok=True)
+                    _rules_vector_store.save_local(str(index_dir))
+                    print(f"[RAG] built rules index and saved to {index_dir}", flush=True)
         except Exception as exc:
             print(f"[RAG] rules vector store init failed: {exc}", flush=True)
             _rules_vector_store = None
@@ -232,28 +262,47 @@ def _detect_duplicates(text: str, req_id: str) -> Tuple[List[ErrorItem], Analyze
     exact_chars = 0
     partial_chars = 0
 
+    verbatim_thr_raw = os.getenv("DUP_VERBATIM_SIM", "0.97").strip()
+    semantic_thr_raw = os.getenv("DUP_SEMANTIC_SIM", "0.85").strip()
+    try:
+        verbatim_thr = float(verbatim_thr_raw)
+    except ValueError:
+        verbatim_thr = 0.97
+    try:
+        semantic_thr = float(semantic_thr_raw)
+    except ValueError:
+        semantic_thr = 0.85
+
     for chunk in chunks:
         query = "query: " + chunk
         try:
-            matches = vector_store.similarity_search(query, k=1)
+            matches = vector_store.similarity_search_with_score(query, k=1)
         except Exception:
             continue
 
         if not matches:
             continue
 
-        match_doc = matches[0]
+        match_doc, score = matches[0]
         source_text = match_doc.page_content
         source_text_clean = source_text[len("passage: ") :] if source_text.startswith("passage: ") else source_text
+
+        # score is squared L2 distance for normalized embeddings -> cosine ~= 1 - score/2
+        try:
+            sim = 1.0 - (float(score) / 2.0)
+        except Exception:
+            sim = 0.0
+        sim = max(0.0, min(1.0, sim))
+
         ratio = difflib.SequenceMatcher(None, chunk, source_text_clean).ratio()
 
-        if ratio >= 0.97:
+        if sim >= verbatim_thr and ratio >= 0.97:
             category = "exact_duplicate"
-            message_prefix = "Полное дублирование"
+            message_prefix = "Дословное дублирование"
             exact_chars += len(chunk)
-        elif ratio >= 0.85:
+        elif sim >= semantic_thr:
             category = "partial_duplicate"
-            message_prefix = "Частичное дублирование"
+            message_prefix = "Смысловое дублирование"
             partial_chars += len(chunk)
         else:
             continue
@@ -262,7 +311,7 @@ def _detect_duplicates(text: str, req_id: str) -> Tuple[List[ErrorItem], Analyze
         errors.append(
             ErrorItem(
                 category=category,
-                message=f"{message_prefix} с материалом из базы: {source_name}",
+                message=f"{message_prefix} с материалом из базы: {source_name} (similarity={sim:.2f})",
                 location=chunk[:300],
                 source=source_name,
                 suggestion="Переформулируйте этот фрагмент, добавьте уникальные факты и измените структуру предложения.",
